@@ -1,0 +1,150 @@
+I'm looking to write a report on a project I recently completed for my Data Processing at Scale Course. I have the report requirements as well as a first draft I would like you to rewrite. I am not happy with this first draft and would like it if you made some significant changes. Leave no sentence unchanged. 
+
+Report Requirements: 
+
+For this project deliverable, you must write a 2-3 page report detailing your work on this project.
+Your report should include the following elements:
+1. Reflection: How did you approach the project? What did you specifically do?
+2. Lessons Learned: What did you learn by doing this project?
+
+3. Implementation: You need to include the following parts in your Project 2 report:
+	a. What hot zone analysis is doing:
+		i. def ST_Contains(queryRectangle: String, pointString: String )
+	b. What hot cell analysis is doing:
+		i. write the multiple steps required before calculating the z-score.
+
+
+The report should have the following qualities: 
+
+1. The reflection explains the student’s own thinking and learning processes, as well as implications for future learning.
+
+2. The reflection is an in-depth analysis of the learning experience, the value of the derived learning to self or others, and the enhancement of the student’s appreciation for the discipline.
+
+
+First Draft to be Changed: 
+
+Reflection:
+In this project, we have been asked to complete two hot spot analysis tasks/functions to interact
+with geospatial data and run some queries on it:
+The first function is HotZoneAnalysis which calculates the hotness of all the rectangles, where a
+rectangle represents a zone and a point represent the pick-up point of NY taxi trip.
+To complete this task, we need the geospatial data related to the rectangle and to the point, so
+basically, we take the longitude and latitude for each of the two corners opposite points of the
+rectangle and the longitude and latitude for the point we need to check whether it’s inside the
+rectangle or not. To do this check, we have a function called ST_Contains(rec_string,
+point_string), this function returns boolean flag to indicate whether a point is located within a
+rectangle or not. The input looks like this (“2.3, 5.1, 6.8, 8.9”, “5.5, 5,5”) where the first two
+numbers of the first args represent lat and long of the first corner of the rectangle, the second two
+number of the first args represent lat and long of the second corener of the rectangle, and the
+second arg represent the long and lat of the point we want to test.
+To implement function in the right way, we need first to determine the minimum and maximum
+corners of the rectangle (upper and lower corners), hence we used “math.min” and math.max to
+compare between the two longitudes and the two latitudes. Then, we check if the long of the
+given point is larger than the lower corner long and less than the upper corner long, same thing
+we do for the latitude.
+After that, we create a reusable user defined function (ST_contains) and register it to join the two
+datasets (rectangle and point datasets) in a sql query with having Where clause to apply
+ST_contains udf.
+Finally, we have to return each rectangle (with its coordinates long and lat for the two corners)
+along with the count of points that are located inside that rectangle from the joinResult view:
+"select rectangle, COUNT (point) as count from joinResult group by rectangle order by
+rectangle".
+The second function is HotCellAnalysis which calculates the hotness for a given cell, the cell
+represents latitude, longitude, and dateTime. We need to calculate the Getis-Ord statistic to
+calculate the hotness (number of pickups for a specific location on a particular day).
+After we define the min and max of longitude, latitude, and dateTime, we select pickup points
+that are in this range from pickupinfo view or table to create another table for this query result.
+Then we calculate Getis-Ord statistics for those points in the query result and return the
+points/cells ordered by z-score.
+This study source was downloaded by 100000851002825 from CourseHero.com on 07-03-2023 12:49:04 GMT -05:00
+https://www.coursehero.com/file/190728179/Fall-B-2022-Project-2-Hot-Spot-Analysis-Reportpdf/
+Analysis/Lessons Learned:
+- We learned how to set up Apache spark, how to create and use UDF (user defined
+functions), and DataFrames.
+- How to run a SQL query on Spark.
+- We learned how to structure and write a Scala project. This is the first time for me to
+work on Scala code and it I’ve learned a lot how to build a simple project, use SBT
+commands, compile, clean and package a Scala project.
+- We experienced working on geospatial data, like how to determine whether a point is
+located inside a zone or not, how to get the boundaries of zone, and to interact with
+longitude and latitude.
+- We learned how to test our code locally by providing input files and how to define the
+test output directory.
+- We learned how to use coalesce(1) to decrease the number of partitions in Data Frame
+if outputs create multiple CSVs.
+Implementation:
+a. What hot zone analysis is doing:
+i. def ST_Contains(queryRectangle: String, pointString: String )
+hot zone analysis tries to find the hotness zone/rectangle (number of pickups of NY tax
+trips within that rectangle).
+The result of hot zone analysis is the rectangles/zones with the number of pickups.
+Example:
+"-73.843148,40.701398,-73.816380,40.715998",2
+"-73.849479,40.681155,-73.810634,40.704221",2
+"-73.861099,40.714345,-73.817260,40.764083",21
+"-73.862040,40.706406,-73.829798,40.739016",16
+def ST_Contains(queryRectangle: String, pointString: String ): Boolean = {
+val rectangle_coordinates = queryRectangle.split(",")
+val target_point_coordinates = pointString.split(",")
+val point_longitude: Double = target_point_coordinates(0).trim.toDouble
+val point_latitude: Double = target_point_coordinates(1).trim.toDouble
+val rect_longitude1: Double = math.min(rectangle_coordinates(0).trim.toDouble,
+rectangle_coordinates(2).trim.toDouble)
+This study source was downloaded by 100000851002825 from CourseHero.com on 07-03-2023 12:49:04 GMT -05:00
+https://www.coursehero.com/file/190728179/Fall-B-2022-Project-2-Hot-Spot-Analysis-Reportpdf/
+val rect_latitude1: Double = math.min(rectangle_coordinates(1).trim.toDouble,
+rectangle_coordinates(3).trim.toDouble)
+val rect_longitude2: Double = math.max(rectangle_coordinates(0).trim.toDouble,
+rectangle_coordinates(2).trim.toDouble)
+val rect_latitude2: Double = math.max(rectangle_coordinates(1).trim.toDouble,
+rectangle_coordinates(3).trim.toDouble)
+if ((point_longitude >= rect_longitude1) && (point_longitude <= rect_longitude2) &&
+(point_latitude >= rect_latitude1) && (point_latitude <= rect_latitude2))
+{ return true }
+return false }
+It checks if a point is located inside the given rectangle, first step we get the longitude and
+latitude of a point, then we try to specify the upper corner of the rectangle, and the lower
+corner of the rectangle by having the min and max when comparing the two latitude and
+longitude of the two corner points of the rectangle. Finally, we see whether the point
+longitude is more than the minimum corner and less than the maximum corner.
+b. What hot cell analysis is doing:
+a. write the multiple steps required before calculating the z-score.
+Hot cell analysis tries to calculate the hotness of a cell, the cell consists of longitude, latitude,
+and datetime. In this analysis, we need to calculate z-score/ Getis-Ord statistics and sort the
+result in a descending order. All the pickup points we need to calculate the z-score for , have to
+be within longitude, latitude, and a given datetime range.
+-7398,4076,14
+-7398,4076,28
+-7399,4074,29
+-7398,4075,27
+pickupInfo.createOrReplaceTempView("pickupInfo")
+val pointsTocheck = spark.sql("select x,y,z,count(*) as countVal from pickupInfo where x>=" +
+minX + " and x<=" + maxX + " and y>="+minY +" and y<="+maxY+" and z>="+minZ+" and
+z<=" +maxZ +" group by x,y,z").persist()
+pointsTocheck.createOrReplaceTempView("pointsTocheck")
+val value = spark.sql("select sum(countVal) as sumVal, sum(countVal*countVal) as sumSqr
+from pointsTocheck").persist()
+val sumValue = value.first().getLong(0).toDouble
+val sumSqred = value.first().getLong(1).toDouble
+val mean = (sumValue/numCells)
+val standard_deviation = Math.sqrt((sumSqred/numCells) - (mean*mean))
+This study source was downloaded by 100000851002825 from CourseHero.com on 07-03-2023 12:49:04 GMT -05:00
+https://www.coursehero.com/file/190728179/Fall-B-2022-Project-2-Hot-Spot-Analysis-Reportpdf/
+val range = spark.sql("select gp1.x as x , gp1.y as y, gp1.z as z, count(*) as numOfNb,
+sum(gp2.countVal) as sigma from pointsTocheck as gp1 inner join pointsTocheck as gp2 on
+((abs(gp1.x-gp2.x) <= 1 and abs(gp1.y-gp2.y) <= 1 and abs(gp1.z-gp2.z) <= 1)) group by gp1.x,
+gp1.y, gp1.z").persist()
+range.createOrReplaceTempView("range")
+spark.udf.register("CalculateZScore",(mean: Double, stddev:Double, numOfNb: Int, sigma: Int,
+numCells:Int)=>(( HotcellUtils.CalculateZScore(numOfNb, stddev, sigma, numCells, mean) )))
+val zScores = spark.sql("select x,y,z,CalculateZScore("+ mean + ","+ standard_deviation
++",numOfNb,sigma," + numCells+") as zscore from range")
+zScores.createOrReplaceTempView("zScores")
+val returnValue = spark.sql("select x,y,z from zScores order by zscore desc")
+return returnValue
+def CalculateZScore(numOfNb: Int, stddev: Double, sigma: Int, numCells: Int, mean: Double):
+Double = {
+val numerator = sigma-(mean*numOfNb)
+val denominator = stddev*Math.sqrt((numCells*numOfNb - numOfNb*numOfNb)/(numCells1))
+return numerator/denominator
+}
